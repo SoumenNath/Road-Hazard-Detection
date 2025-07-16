@@ -1,0 +1,18 @@
+A detect_and_log.py that saves detections to CSV
+
+A dashboard or report builder?
+
+
+Feature	Why It’s Useful
+TTS Audio Alerts (e.g., “Debris ahead”)	Makes it accessible or hands-free
+Web Interface (Streamlit/Gradio)	Great for demos
+Frame skipping (faster processing)	Improve speed on longer videos
+Model confidence thresholding	Filter out low-confidence predictions
+
+Annotate 200–300+ images for better accuracy
+
+Train with augmentations (YOLOv8 does this automatically, but you can tweak it)
+
+Try larger model (yolov8s.pt, m.pt) if you get access to GPU
+
+Add more hazard classes (e.g., pedestrians, animals, vehicles blocking path)
