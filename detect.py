@@ -90,10 +90,16 @@ def run_detection_and_log(input_video_path, output_video_path, csv_log_path):
                     4,
                 )
 
-            # Show frame in real-time window
-            cv2.imshow("Road Hazard Detection", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                print("[INFO] Quit key pressed. Exiting early.")
+            try:
+                cv2.imshow("Road Hazard Detection", frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    print("[INFO] Quit key pressed. Exiting early.")
+                    break
+            except cv2.error as e:
+                print(f"[WARN] OpenCV display error: {e}")
+                break
+            except ConnectionResetError as e:
+                print(f"[WARN] Socket reset error: {e}")
                 break
 
             out.write(frame)
@@ -105,7 +111,10 @@ def run_detection_and_log(input_video_path, output_video_path, csv_log_path):
     finally:
         cap.release()
         out.release()
-        cv2.destroyAllWindows()
+        try:
+            cv2.destroyAllWindows()
+        except:
+            pass
 
         # Save logs
         if log_data:
