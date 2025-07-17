@@ -1,9 +1,8 @@
 A detect_and_log.py that saves detections to CSV
 
-A dashboard or report builder?
+A dashboard or report builder
 
 
-Feature	Why It’s Useful
 TTS Audio Alerts (e.g., “Debris ahead”)	Makes it accessible or hands-free
 Web Interface (Streamlit/Gradio)	Great for demos
 Frame skipping (faster processing)	Improve speed on longer videos
@@ -16,3 +15,20 @@ Train with augmentations (YOLOv8 does this automatically, but you can tweak it)
 Try larger model (yolov8s.pt, m.pt) if you get access to GPU
 
 Add more hazard classes (e.g., pedestrians, animals, vehicles blocking path)
+
+Exporting your model for mobile
+
+Organizing your project repo
+
+Naming conventions or model versioning
+
+
+ Highly Recommended Next Steps
+A. Save detection logs for analysis
+🔹 A version that logs to JSON instead? A summary report generator (e.g., hazard counts per class)? A dashboard interface to visualize this log? Let’s build the analysis layer on top!
+B. Add hazard summaries per video
+🔹 Add a matplotlib bar chart visualization? Generate separate logs or summaries per video file? Turn this into a Jupyter Notebook dashboard?
+C. Add visual alert overlays
+🔹 Post the fully updated detect_and_log.py with this alert overlay? 🔔 Add sound alert (requires playsound or pygame) 🖼️ Customize appearance (e.g. icons, animated alerts, danger symbols) 📱 Prepare for real-time deployment (OpenCV window, Raspberry Pi, etc.)
+D. GUI (WEB)
+E. ReadMe

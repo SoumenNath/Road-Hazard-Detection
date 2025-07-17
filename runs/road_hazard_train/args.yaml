@@ -1,8 +1,8 @@
 task: detect
 mode: train
-model: yolov8n.pt
+model: models/yolov8n.pt
 data: data/data.yaml
-epochs: 10
+epochs: 15
 time: null
 patience: 5
 batch: 4
@@ -13,7 +13,7 @@ cache: true
 device: cpu
 workers: 8
 project: runs
-name: road_hazard_train
+name: road_hazard_train2
 exist_ok: false
 pretrained: true
 optimizer: auto
@@ -102,4 +102,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: runs\road_hazard_train
+save_dir: runs\road_hazard_train2

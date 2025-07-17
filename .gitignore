@@ -1,3 +1,10 @@
 train.cache
 val.cache
-output/hazard_output
+data/videos/
+data/input_images/
+data/Road Hazards.v3i.yolov8/
+data/train/images/
+data/train/labels/
+data/val/images/
+data/train/labels/
+extras/
