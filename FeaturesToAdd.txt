@@ -31,4 +31,8 @@ B. Add hazard summaries per video
 C. Add visual alert overlays
 🔹 Post the fully updated detect_and_log.py with this alert overlay? 🔔 Add sound alert (requires playsound or pygame) 🖼️ Customize appearance (e.g. icons, animated alerts, danger symbols) 📱 Prepare for real-time deployment (OpenCV window, Raspberry Pi, etc.)
 D. GUI (WEB)
+🔹 A progress bar or spinner Customizable confidence threshold or batch size Real-time preview of video Hazard filtering (e.g., only "pothole")
 E. ReadMe
+
+Error after pressing q
+Add pressqing q to gui

@@ -1,115 +1,116 @@
-import os
 import cv2
 import pandas as pd
 from ultralytics import YOLO
 
-# === Configuration ===
-VIDEO_PATH = "data/videos/road_test3_2.mp4"
-MODEL_PATH = "models/best.pt"
-OUTPUT_VIDEO_PATH = "output/hazard_output_logged.mp4"
-LOG_PATH = "output/detections.csv"
-ALERT_CLASSES = {"debris", "pothole", "construction"}  # Add your custom class names
-ALERT_DURATION = 15  # frames to keep alert visible
+# Config
+ALERT_CLASSES = {"debris", "pothole", "construction"}
+ALERT_DURATION = 15
 
-# === Ensure output directory exists ===
-os.makedirs("output", exist_ok=True)
+def run_detection_and_log(input_video_path, output_video_path, csv_log_path):
+    model = YOLO("models/best.pt")
+    cap = cv2.VideoCapture(input_video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Failed to open video: {input_video_path}")
 
-# === Load YOLOv8 model ===
-print(f"📦 Loading YOLO model from {MODEL_PATH}")
-model = YOLO(MODEL_PATH)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
 
-# === Open input video ===
-print(f"🎥 Opening video file {VIDEO_PATH}")
-cap = cv2.VideoCapture(VIDEO_PATH)
-if not cap.isOpened():
-    print("❌ Failed to open video.")
-    exit()
+    frame_idx = 0
+    alert_active = False
+    alert_timer = 0
+    log_data = []
 
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps = cap.get(cv2.CAP_PROP_FPS)
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter(OUTPUT_VIDEO_PATH, fourcc, fps, (width, height))
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-# === Initialize tracking variables ===
-frame_index = 0
-alert_active = False
-alert_timer = 0
-log_data = []
+            results = model(frame)[0]
 
-# === Detection loop with guaranteed cleanup ===
-try:
-    print("🚀 Starting detection...")
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("✅ End of video or read failure.")
-            break
+            frame_alert = False
+            if results.boxes is not None and len(results.boxes) > 0:
+                for box in results.boxes:
+                    cls_id = int(box.cls[0])
+                    conf = float(box.conf[0])
+                    label = model.names[cls_id]
 
-        print(f"🧠 Processing frame {frame_index}")
-        results = model(frame)[0]
-        boxes = results.boxes
-        frame_alert = False
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    color = (0, 255, 0)
+                    if label in ALERT_CLASSES:
+                        color = (0, 0, 255)
+                        frame_alert = True
 
-        if boxes is not None and len(boxes) > 0:
-            for box in boxes:
-                cls_id = int(box.cls)
-                conf = float(box.conf)
-                label = model.names[cls_id]
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(
+                        frame,
+                        f"{label} {conf:.2f}",
+                        (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        color,
+                        2,
+                    )
 
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                color = (0, 255, 0)
-                if label in ALERT_CLASSES:
-                    color = (0, 0, 255)
-                    frame_alert = True
+                    log_data.append(
+                        {
+                            "frame": frame_idx,
+                            "label": label,
+                            "confidence": round(conf, 3),
+                            "x1": x1,
+                            "y1": y1,
+                            "x2": x2,
+                            "y2": y2,
+                        }
+                    )
 
-                # Draw bounding box and label
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            if frame_alert:
+                alert_active = True
+                alert_timer = ALERT_DURATION
+            elif alert_timer > 0:
+                alert_timer -= 1
+            else:
+                alert_active = False
+
+            if alert_active:
+                overlay = frame.copy()
+                cv2.rectangle(overlay, (0, 0), (width, height), (0, 0, 255), -1)
+                alpha = 0.25
+                frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
                 cv2.putText(
-                    frame, f"{label} {conf:.2f}", (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2
+                    frame,
+                    "!! HAZARD ALERT !!",
+                    (50, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.5,
+                    (255, 255, 255),
+                    4,
                 )
 
-                # Log detection
-                log_data.append({
-                    "frame": frame_index,
-                    "label": label,
-                    "confidence": round(conf, 3),
-                    "x1": x1, "y1": y1, "x2": x2, "y2": y2
-                })
+            # Show frame in real-time window
+            cv2.imshow("Road Hazard Detection", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                print("[INFO] Quit key pressed. Exiting early.")
+                break
 
-        # Manage alert overlay state
-        if frame_alert:
-            alert_active = True
-            alert_timer = ALERT_DURATION
-        elif alert_timer > 0:
-            alert_timer -= 1
+            out.write(frame)
+            frame_idx += 1
+
+    except KeyboardInterrupt:
+        print("\n[INFO] Early termination detected. Saving progress...")
+
+    finally:
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+
+        # Save logs
+        if log_data:
+            pd.DataFrame(log_data).to_csv(csv_log_path, index=False)
+            print(f"[INFO] Detections saved to {csv_log_path}")
         else:
-            alert_active = False
-
-        # Add overlay if alert is active
-        if alert_active:
-            overlay = frame.copy()
-            cv2.rectangle(overlay, (0, 0), (width, height), (0, 0, 255), -1)
-            frame = cv2.addWeighted(overlay, 0.25, frame, 0.75, 0)
-            cv2.putText(
-                frame, "!! HAZARD ALERT !!", (50, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 4
-            )
-
-        # Show live video
-        cv2.imshow("Road Hazard Detection", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            print("🛑 Interrupted by user.")
-            break
-
-        out.write(frame)
-        frame_index += 1
-
-finally:
-    print(f"💾 Writing log to {LOG_PATH}")
-    pd.DataFrame(log_data).to_csv(LOG_PATH, index=False)
-    cap.release()
-    out.release()
-    cv2.destroyAllWindows()
-    print(f"✅ All done. Output saved to: {OUTPUT_VIDEO_PATH}")
+            pd.DataFrame(columns=["frame", "label", "confidence", "x1", "y1", "x2", "y2"]).to_csv(csv_log_path, index=False)
+            print(f"[INFO] No detections found. Empty log saved to {csv_log_path}")
